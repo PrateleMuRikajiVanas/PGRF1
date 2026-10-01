@@ -1,11 +1,16 @@
 package controller;
 
+import graphics.rasterizer.LineRasterizer;
+import graphics.rasterizer.TrivialLineRasterizer;
+import model.Line;
+import model.Point;
 import view.Canvas;
 
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.*;
+import java.awt.event.*;
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Handles user input and controls the application flow related to the {@link Canvas}.
@@ -16,76 +21,71 @@ import java.awt.event.MouseEvent;
  */
 public class Controller {
 
-    // Aktuální pozice kurzoru ovládaného klávesami
-    private int x, y;
+    private Point startPoint;
+    private Point currentPoint;
+
     private final Canvas canvas;
+    private final LineRasterizer rasterizer;
+
+    private final List<Line> lines = new ArrayList<Line>();
+    private static final int LINE_COLOR = Color.WHITE.getRGB();
+    private static final int PREVIEW_COLOR = Color.RED.getRGB();
 
     /* -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- Constructors -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= */
 
     public Controller(Canvas canvas) {
         this.canvas = canvas;
-        // Inicializace pozice do středu plátna
-        this.x = canvas.getWidth() / 2;
-        this.y = canvas.getHeight() / 2;
+        this.rasterizer = new TrivialLineRasterizer(canvas.getRaster());
     }
 
     /* -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= Main functions -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- */
 
     public void init() {
-        // Inicializace obsahu plátna
-        canvas.draw();
+        canvas.clear();
         // Obsluha vstupu z myši
         canvas.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
-                // Nastavení barvy pixelu na pozici kurzoru myši
-                canvas.getRaster().setRGB(e.getX(), e.getY(), 0xff0000);
-                // Aktualizace zobrazení
-                canvas.repaint();
+                startPoint = getPoint(e);
+                currentPoint = startPoint;
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                lines.add(new Line(startPoint, getPoint(e), LINE_COLOR));
+                currentPoint = null;
+                startPoint = null;
+                render();
             }
         });
 
         // Obsluha vstupu z klávesnice
-        canvas.addKeyListener(new KeyAdapter() {
+        canvas.addMouseMotionListener(new MouseMotionAdapter() {
             @Override
-            public void keyPressed(KeyEvent e) {
-                // A. Vykreslení horizontální úsečky ze středu plátna k pravému okraji
-                if (e.getKeyCode() == KeyEvent.VK_X) {
-                    int centerX = canvas.getWidth() / 2;
-                    int centerY = canvas.getHeight() / 2;
-                    int rightBorder = canvas.getWidth();
-
-                    // Rasterizace horizontální úsečky
-                    for (int x = centerX; x < rightBorder; x++) {
-                        // Kontrola platnosti souřadnic
-                        if(0 <= x && x < canvas.getWidth() && 0 <= y && y < canvas.getHeight()) {
-                            canvas.getRaster().setRGB(x, centerY, 0xff0000);
-                        }
-                    }
+            public void mouseDragged(MouseEvent e) {
+                if (startPoint == null) {
+                    return;
                 }
-
-                // B. SNAKE
-                if (e.getKeyCode() == KeyEvent.VK_RIGHT) {
-                    x++; // Posun doprava
-                }
-                if (e.getKeyCode() == KeyEvent.VK_LEFT) {
-                    x--; // Posun doleva
-                }
-                if (e.getKeyCode() == KeyEvent.VK_DOWN) {
-                    y++; // Posun dolů
-                }
-                if (e.getKeyCode() == KeyEvent.VK_UP) {
-                    y--; // Posun nahoru
-                }
-
-                // Kontrola, zda se aktuální pozice nachází v mezích plátna
-                if (0 <= x && x < canvas.getWidth() && 0 <= y && y < canvas.getHeight()) {
-                    canvas.getRaster().setRGB(x, y, 0xffff00);
-                }
-                // Aktualizace zobrazení
-                canvas.repaint();
+                currentPoint = getPoint(e);
+                render();
             }
         });
+        canvas.repaint();
+    }
+
+    private void render() {
+        canvas.clear();
+        for (Line line : lines) {
+            rasterizer.rasterize(line);
+        }
+        if (startPoint != null) {
+            rasterizer.rasterize(new Line(startPoint, currentPoint, PREVIEW_COLOR));
+        }
+        canvas.repaint();
+    }
+
+    private Point getPoint(MouseEvent e) {
+        return new Point(e.getX(), e.getY());
     }
 
 }
