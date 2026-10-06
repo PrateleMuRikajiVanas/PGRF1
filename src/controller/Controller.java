@@ -70,7 +70,25 @@ public class Controller {
                 render();
             }
         });
+
+        //Obsluha mazani (C)
+        canvas.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_C) {
+                    clearAll();
+                }
+            }
+        });
+
         canvas.repaint();
+    }
+
+    private void clearAll() {
+        lines.clear();
+        startPoint = null;
+        currentPoint = null;
+        render();
     }
 
     private void render() {
