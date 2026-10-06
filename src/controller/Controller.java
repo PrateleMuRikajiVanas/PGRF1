@@ -6,12 +6,13 @@ import model.Line;
 import model.Point;
 import view.Canvas;
 
+import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
-
+import model.Polygon;
 /**
  * Handles user input and controls the application flow related to the {@link Canvas}.
  * The controller coordinates input events, canvas operations, and rendering updates.
@@ -30,6 +31,10 @@ public class Controller {
     private final List<Line> lines = new ArrayList<Line>();
     private static final int LINE_COLOR = Color.WHITE.getRGB();
     private static final int PREVIEW_COLOR = Color.RED.getRGB();
+    private static final int POLYGON_COLOR = Color.GREEN.getRGB();
+
+    private final Polygon polygon = new Polygon();
+    private boolean drawingPolygon = true;
 
     /* -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- Constructors -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= */
 
@@ -48,11 +53,21 @@ public class Controller {
             public void mousePressed(MouseEvent e) {
                 startPoint = getPoint(e);
                 currentPoint = startPoint;
+
+                if (SwingUtilities.isLeftMouseButton(e)) {
+                    drawingPolygon = true;
+                } else if (SwingUtilities.isRightMouseButton(e)) {
+                    drawingPolygon = false;
+                }
             }
 
             @Override
             public void mouseReleased(MouseEvent e) {
-                lines.add(new Line(startPoint, getPoint(e), LINE_COLOR));
+                if (drawingPolygon) {
+                    polygon.addPoint(getPoint(e));
+                } else {
+                    lines.add(new Line(startPoint, getPoint(e), LINE_COLOR));
+                }
                 currentPoint = null;
                 startPoint = null;
                 render();
@@ -76,7 +91,11 @@ public class Controller {
             @Override
             public void keyPressed(KeyEvent e) {
                 if (e.getKeyCode() == KeyEvent.VK_C) {
-                    clearAll();
+                    lines.clear();
+                    polygon.clear();
+                    startPoint = null;
+                    currentPoint = null;
+                    render();
                 }
             }
         });
@@ -84,20 +103,29 @@ public class Controller {
         canvas.repaint();
     }
 
-    private void clearAll() {
-        lines.clear();
-        startPoint = null;
-        currentPoint = null;
-        render();
-    }
 
     private void render() {
         canvas.clear();
         for (Line line : lines) {
             rasterizer.rasterize(line);
         }
-        if (startPoint != null) {
-            rasterizer.rasterize(new Line(startPoint, currentPoint, PREVIEW_COLOR));
+
+        List<Point> polyPoints = polygon.getPoints();
+        for (int i = 0; i < polyPoints.size(); i++) {
+            Point p1 = polyPoints.get(i);
+            Point p2 = polyPoints.get((i + 1) % polyPoints.size());
+            rasterizer.rasterize(new Line(p1, p2, POLYGON_COLOR));
+        }
+
+        if (startPoint != null && currentPoint != null) {
+            if (drawingPolygon && polyPoints.size() > 0) {
+                Point first = polyPoints.get(0);
+                Point last = polyPoints.get(polyPoints.size() - 1);
+                rasterizer.rasterize(new Line(last, currentPoint, PREVIEW_COLOR));
+                rasterizer.rasterize(new Line(currentPoint, first, PREVIEW_COLOR));
+            } else {
+                rasterizer.rasterize(new Line(startPoint, currentPoint, PREVIEW_COLOR));
+            }
         }
         canvas.repaint();
     }
