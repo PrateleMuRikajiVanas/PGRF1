@@ -17,12 +17,7 @@ public class Polygon {
         return points;
     }
 
-
     public void clear() {
         points.clear();
-    }
-
-    public boolean isEmpty() {
-        return points.isEmpty();
     }
 }
