@@ -28,7 +28,7 @@ public class TrivialLineRasterizer implements LineRasterizer {
     private void rasterize(int x1, int y1, int x2, int y2, int color) {
         int dx = x2 - x1;
         int dy = y2 - y1;
-
+        //vyber dominantni osy
         if (Math.abs(dx) > Math.abs(dy)) {
             //X
             if (x1 > x2) {
